@@ -1,26 +1,45 @@
 import { useParams } from "react-router-dom";
 import { useSSE } from "../services/SSEService";
-import { jogadores } from "../components/LoginButtons";
+import { imagens, jogadores } from "../components/LoginButtons";
 import { useState } from "react";
 import { Votacao_Estado } from "../components/Dados";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../components/Header";
 
-interface ResultadoVotacao {
+// Uma rolagem individual dentro de um ataque de inimigo
+interface RolagemAtaque {
+  name: string;
+  resultado: number | number[];
+  bonus: number;
+  total: number;
+}
+
+// Um ataque individual de um inimigo (contém N rolagens, uma por dado configurado)
+interface Ataque {
+  rolagens: RolagemAtaque[];
+}
+
+// Cada jogador-alvo no resultado da votação
+interface ResultadoJogador {
   name: string;
   votos: number;
-  rolagens?: {
-    name: string;
-    moda: number | number[];
-    moda_geral?: number;
-    total?: number;
-    bonus?: number;
-  }[];
+  porcentagem: number;
+  // quantidadeAtaques = número de inimigos direcionados para este jogador
+  quantidadeAtaques: number;
+  // Rolagens individuais de cada inimigo (presente quando há dados configurados)
+  ataques?: Ataque[];
 }
 
 interface VotacaoEstadoResponse {
   votosTotal: number;
-  result: ResultadoVotacao[];
+  numeroInimigos: number;
+  result: ResultadoJogador[];
+}
+
+// Encontra o índice (1-based) de um jogador pelo nome para exibir a imagem futuramente
+function jogadorIdPorNome(nome: string): number {
+  const idx = jogadores.indexOf(nome);
+  return idx >= 0 ? idx + 1 : -1;
 }
 
 export default function AguardaVotacaoPage() {
@@ -38,8 +57,8 @@ export default function AguardaVotacaoPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const resultado = await Votacao_Estado(id);
-      setResultado(resultado);
+      const res = await Votacao_Estado(id);
+      setResultado(res);
       setMostrarResultado(true);
     } catch {
       alert("Erro ao buscar resultado da votação");
@@ -48,12 +67,83 @@ export default function AguardaVotacaoPage() {
     }
   };
 
+  // Ordena: mais votos (mais inimigos) primeiro
+  const opcoesOrdenadas = resultado
+    ? [...resultado.result].sort((a, b) => b.votos - a.votos)
+    : [];
+
+  const maisvotado = opcoesOrdenadas[0] ?? null;
+  const demais = opcoesOrdenadas.slice(1);
+
+  // Renderiza as rolagens individuais de cada inimigo contra um jogador
+  const renderizarAtaques = (ataques: Ataque[]) => (
+    <div className="ataques-container">
+      {ataques.map((ataque, aIndex) => (
+        <div key={aIndex} className="ataque-item">
+          <h3>Inimigo {aIndex + 1}</h3>
+          {ataque.rolagens.map((r, rIndex) => (
+            <div key={rIndex} className="rolagem-detalhes">
+              <strong>{r.name}: </strong>
+              <span>
+                {Array.isArray(r.resultado)
+                  ? r.resultado.join(" + ")
+                  : r.resultado}
+                {r.bonus > 0 ? ` + ${r.bonus}` : ""}
+                {" = "}
+                <strong>{r.total}</strong>
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Renderiza o card de um jogador-alvo no resultado
+  const renderizarCardJogador = (item: ResultadoJogador, destaque: boolean) => {
+    const jogadorId = jogadorIdPorNome(item.name);
+    const imagemJogador = jogadorId > 0 ? imagens[jogadorId - 1] : undefined;
+
+    return (
+      <div className={`resultado-item ${destaque ? "vencedor" : "perdedor"}`}>
+        {/* Espaço reservado para imagem do personagem */}
+        {imagemJogador
+          ? <img src={imagemJogador} alt={item.name} className="resultado-jogador-img" />
+          : <div className="imagem-placeholder resultado-jogador-img" aria-label={item.name}>{item.name}</div>
+        }
+
+        <h1>{item.name}</h1>
+        <h2><strong>Votos: {item.votos}</strong></h2>
+
+        {/* Barra de progresso */}
+        <div className="progresso-container">
+          <div
+            className="progresso-barra"
+            style={{ width: `${item.porcentagem}%` }}
+          />
+          <h2>
+            {destaque && "Porcentagem de votos: "}
+            <span className="progresso-texto">{item.porcentagem}%</span>
+          </h2>
+        </div>
+
+        <h2>
+          {item.quantidadeAtaques}{" "}
+          {item.quantidadeAtaques === 1 ? "inimigo ataca" : "inimigos atacam"}
+        </h2>
+
+        {/* Rolagens individuais dos inimigos contra este jogador */}
+        {item.ataques && item.ataques.length > 0 && renderizarAtaques(item.ataques)}
+      </div>
+    );
+  };
+
   return (
     <>
-      <Header isMaster={true}/>
+      <Header isMaster={true} />
       <div id="tudo">
         <main className="conteudo">
-          <h1>Aguardando votacao do {jogadores[Number(id) - 1]}</h1>
+          <h1>Aguardando votação — {jogadores[Number(id) - 1]}</h1>
           <h2>Votos totais: {sseValue}</h2>
           <div className="button" onClick={verResultadoVotacao}>
             {loading ? "Carregando..." : "Ver Resultado e fechar votação"}
@@ -72,79 +162,29 @@ export default function AguardaVotacaoPage() {
               >
                 X
               </button>
-              <h1 id="votacao-resultado">Resultado da Votação</h1>
+
+              <h1 id="votacao-resultado">Quem será atacado?</h1>
               <h2 id="total-votacao">Total de votos: {resultado.votosTotal}</h2>
+              <h2>Total de inimigos: {resultado.numeroInimigos}</h2>
 
-              {/* AQUI É A PARTE QUE VOCÊ PRECISA COPIAR DO PRIMEIRO CÓDIGO */}
               <div className="result-options-main-container">
-                {/* Vencedor - Esquerda */}
-                <div className="vencedor-container">
-                  {resultado?.result
-                    .filter((item) => item.votos === Math.max(...resultado.result.map(r => r.votos)))
-                    .map((item, index) => (
-                      <div key={index} className="resultado-item vencedor">
-                        <div>
-                          <h1>{item.name}</h1>
-                          <h2>
-                            <strong>Votos: {item.votos}</strong>
-                          </h2>
-                        </div>
 
-                        {item.rolagens && (
-                          <div className="rolagens-info">
-                            {item.rolagens.map((rolagemItem, rIndex) => (
-                              <div className="rolagem-detalhes" key={rIndex}>
-                                <strong>{rolagemItem.name}: </strong>
-                                <span>
-                                  {Array.isArray(rolagemItem.moda)
-                                    ? rolagemItem.moda.join(" + ")
-                                    : rolagemItem.moda}{" "}
-                                  + {rolagemItem.bonus || 0} = {rolagemItem.total}
-                                </span>
-                              </div>
-                            ))}
+                {/* Mais votado — coluna esquerda */}
+                {maisvotado && (
+                  <div className="vencedor-container">
+                    {renderizarCardJogador(maisvotado, true)}
+                  </div>
+                )}
 
-                            <div className="progresso-container">
-                              <div
-                                className="progresso-barra"
-                                style={{
-                                  width:
-                                    resultado.votosTotal > 0
-                                      ? `${(item.votos / resultado.votosTotal) * 100}%`
-                                      : "0%",
-                                }}
-                              ></div>
-
-                              <h2>
-                                Porcentagem de votos:{" "}
-                                <span className="progresso-texto">
-                                  {resultado.votosTotal > 0
-                                    ? `${Math.round(
-                                        (item.votos / resultado.votosTotal) * 100
-                                      )}%`
-                                    : "0%"}
-                                </span>
-                              </h2>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-
-                {/* Perdedores - Direita (coluna fina) */}
+                {/* Demais jogadores — coluna direita */}
                 <div className="perdedores-container">
-                  {resultado?.result
-                    .filter((item) => item.votos !== Math.max(...resultado.result.map(r => r.votos)))
-                    .map((item, index) => (
-                      <div key={index} className="resultado-item perdedor">
-                        <h1>{item.name}</h1>
-                        <h2>
-                          <strong>Votos: {item.votos}</strong>
-                        </h2>
-                      </div>
-                    ))}
+                  {demais.map((item, index) => (
+                    <div key={index}>
+                      {renderizarCardJogador(item, false)}
+                    </div>
+                  ))}
                 </div>
+
               </div>
             </div>
           </div>

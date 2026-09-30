@@ -4,7 +4,6 @@ import { Deposita_Votos } from "../components/Dados";
 import { Deposita_Votos_Com_Dado } from "../components/Dados";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { jogadores } from "../components/LoginButtons";
 
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
@@ -141,7 +140,8 @@ export function AcoesPage() {
       <div id="tudo">
         <div id="centralizar-botao">
           <div className="votacao-info">
-            <h1>Votação - Personagem {jogadores[Number(id) - 1]}</h1>
+            <h1>Votação - Quem será atacado?</h1>
+            <p className="instrucoes">O auditório escolhe qual personagem os inimigos irão atacar.</p>
 
             {mensagem && (
               <div
@@ -167,9 +167,9 @@ export function AcoesPage() {
 
           {votacaoComDado && votacaoComDado.length > 0 && (
             <div className="votacao-container">
-              <h2>🎲 Votação com Dados</h2>
+              <h2>🎲 Votar em um personagem</h2>
               <p className="instrucoes">
-                Clique em uma opção para votar e rolar os dados
+                Clique no personagem que você quer que os inimigos ataquem
               </p>
 
               <div className="opcoes-grid">
@@ -240,8 +240,8 @@ export function AcoesPage() {
 
           {votacao && votacao.length > 0 && (
             <div className="votacao-container">
-              <h2>📊 Votação Normal</h2>
-              <p className="instrucoes">Clique em uma opção para votar</p>
+              <h2>📊 Votar em um personagem</h2>
+              <p className="instrucoes">Clique no personagem que você quer que os inimigos ataquem</p>
 
               <div className="opcoes-grid">
                 {votacao.map((opcao, index) => (

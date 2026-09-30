@@ -13,14 +13,6 @@ export interface OpcaoComDado {
   dados: DadoVotacao;
 }
 
-export interface ResultadoVotacao {
-  name: string;
-  votos: number;
-  rolagens?: {
-    name: string;
-    moda: number | number[];
-  };
-}
 
 // Função para ver votação (agora suporta ambos os tipos)
 export async function Ver_Votacao(playerId: string) {

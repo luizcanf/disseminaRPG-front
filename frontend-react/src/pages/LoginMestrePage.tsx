@@ -14,6 +14,8 @@ export function LoginMaster() {
             <MasterButtons MasterNumber={1} />
             <MasterButtons MasterNumber={2} />
             <MasterButtons MasterNumber={3} />
+            <MasterButtons MasterNumber={4} />
+            <MasterButtons MasterNumber={5} />
           </div>
         </section>
         <Footer />

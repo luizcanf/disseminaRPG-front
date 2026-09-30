@@ -3,7 +3,7 @@ import { Footer } from "../components/Footer";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { api } from "../services/ApiService";
-import { jogadores } from "../components/LoginButtons";
+import { jogadores, imagens } from "../components/LoginButtons";
 import { toast } from "react-toastify";
 
 interface DadoVotacao {
@@ -13,274 +13,103 @@ interface DadoVotacao {
     bonus?: number;
 }
 
-interface OpcaoComDado {
+// Representa a configuração de dados para um dos 5 jogadores-alvo
+interface OpcaoJogador {
+    // nome do jogador — vem do array jogadores[], não é editável pelo mestre
     name: string;
+    // índice 1-based do jogador (1..5), usado para exibir a imagem futuramente
+    jogadorId: number;
     dados: DadoVotacao[];
-    infoExtra?: string;
 }
 
-const acoesPadraoCompleta: Record<string, OpcaoComDado[]> = {
-    "1": [
-        {
-            name: "Atacar com Katana",
-            dados: [
-                { name: "Teste", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Dano", lados: 8, quantidade: 1, bonus: 3 },
-            ],
-        },
-        {
-            name: "Golpe Certeiro",
-            dados: [
-                { name: "Teste", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Vantagem", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Dano", lados: 8, quantidade: 1, bonus: 5 },
-            ],
-        },
-        {
-            name: "Mísseis Mágicos",
-            dados: [
-                { name: "Dano (acerto automático)", lados: 4, quantidade: 3, bonus: 3 },
-            ],
-        },
-        {
-            name: "Mãos Flamejantes",
-            dados: [
-                { name: "Dano (acerto automático)", lados: 6, quantidade: 3, bonus: 0 },
-            ],
-        },
-        {
-            name: "Recuperar o Fôlego",
-            dados: [{ name: "Cura", lados: 10, quantidade: 1, bonus: 3 }],
-        },
-        {
-            name: "Ajudar",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Usar Item",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Sorte",
-            dados: [{name: "Dado Sorte", lados: 6, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Fugir Covarde",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Poção de Cura",
-            dados: [{name: "Cura", lados: 6, quantidade: 3, bonus: 0}]
-        }
-    ],
+// Dados padrão sugeridos para os inimigos atacarem cada jogador
+// O mestre pode customizar livremente após carregar os padrões
+const dadosPadraoInimigos: DadoVotacao[] = [
+    { name: "Ataque", lados: 20, quantidade: 1, bonus: 0 },
+    { name: "Dano", lados: 6, quantidade: 1, bonus: 0 },
+];
 
-    "2": [
-        {
-            name: "Espada Curta",
-            dados: [
-                { name: "Teste", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Dano", lados: 6, quantidade: 1, bonus: 3 },
-            ],
-        },
-        {
-            name: "Esconder-se",
-            dados: [{ name: "Teste", lados: 20, quantidade: 1, bonus: 7 }],
-        },
-        {
-            name: "Ataque Furtivo",
-            dados: [
-                { name: "Teste", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Vantagem", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Dano", lados: 6, quantidade: 4, bonus: 7 },
-            ],
-            infoExtra: "Só pode usar se estiver furtivo",
-        },
-        {
-            name: "Ajudar",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Usar Item",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Sorte",
-            dados: [{name: "Dado Sorte", lados: 6, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Fugir Covarde",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Toque Necrótico",
-            dados: [{name: "Dado Padrão", lados: 6, quantidade: 1, bonus: 5}]
-        },
-        {
-            name: "Poção de Cura",
-            dados: [{name: "Cura", lados: 6, quantidade: 3, bonus: 0}]
-        }
-    ],
-
-    "3": [
-        {
-            name: "Espada",
-            dados: [
-                { name: "Teste", lados: 20, quantidade: 1, bonus: 5 },
-                { name: "Dano", lados: 10, quantidade: 1, bonus: 5 },
-            ],
-        },
-        {
-            name: "Raio de Fogo",
-            dados: [
-                { name: "Teste", lados: 20, quantidade: 1, bonus: 4 },
-                { name: "Dano", lados: 10, quantidade: 1, bonus: 0 },
-            ],
-        },
-        {
-            name: "Raio de Gelo",
-            dados: [
-                {name: "Dano", lados: 8, quantidade: 1, bonus:0}
-            ]
-        },
-        {
-            name: "Talho Mental",
-            dados: [
-                {name: "Dano", lados: 6, quantidade: 1, bonus: 0}
-            ]
-        },
-        {
-            name: "Raio de Bruxa",
-            dados: [
-                {name: "Dano", lados: 12, quantidade: 2, bonus: 0}
-            ]
-        },
-        {
-            name: "Recuperar o Fôlego",
-            dados: [{ name: "Cura", lados: 10, quantidade: 1, bonus: 3 }],
-        },
-        {
-            name: "Ajudar",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Usar Item",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Sorte",
-            dados: [{name: "Dado Sorte", lados: 6, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Fugir Covarde",
-            dados: [{ name: "Dado Padrão", lados: 20, quantidade: 1, bonus: 0 }],
-        },
-        {
-            name: "Poção de Cura",
-            dados: [{name: "Cura", lados: 6, quantidade: 3, bonus: 0}]
-        }
-    ],
-};
+// Inicializa as 5 opções fixas (uma por jogador) com dados padrão
+function criarOpcoesIniciais(nomes: string[]): OpcaoJogador[] {
+    return nomes.map((nome, i) => ({
+        name: nome,
+        jogadorId: i + 1,
+        dados: dadosPadraoInimigos.map(d => ({ ...d })), // cópia para evitar referência compartilhada
+    }));
+}
 
 export function VotacaoComDados() {
     const { id } = useParams();
-    const [opcoes, setOpcoes] = useState<OpcaoComDado[]>([]);
-    const [acoesPadrao, setAcoesPadrao] = useState<OpcaoComDado[]>([]);
-    const [mostrarModalAcoes, setMostrarModalAcoes] = useState<boolean>(false);
-    const navigate = useNavigate()
-        
-    const abrirAcoesPadrao = () => {
-        if (!id) return;
-        const acoes = acoesPadraoCompleta[id];
-        if (!acoes) {
-            toast.error('Nenhuma ação encontrada');
-            return;
-        }
-        setAcoesPadrao(acoes);
-        setMostrarModalAcoes(true);
-    };
+    const navigate = useNavigate();
 
-    const adicionarAcaoPadrao = (acao: OpcaoComDado) => {
-        const novaAcao = JSON.parse(JSON.stringify(acao));
-        console.log(acao);
-        setOpcoes((prev) => [...prev, novaAcao]);
-        setMostrarModalAcoes(false);
-    };
+    // As 5 opções são os próprios jogadores — o mestre só configura os dados de cada um
+    const [opcoes, setOpcoes] = useState<OpcaoJogador[]>(() =>
+        criarOpcoesIniciais(jogadores)
+    );
 
-    const getNewDadoPadrao = (dado: DadoVotacao | null): DadoVotacao => ({
-        name: dado ? dado.name : "",
-        lados: dado ? dado.lados : 0,
-        quantidade: dado ? dado.quantidade : 1,
-        bonus: dado ? dado.bonus : 0,
-    });
+    // --- Helpers de atualização ---
 
-    const adicionarOpcao = () => {
-        setOpcoes([...opcoes, { name: "", dados: [] }]);
-    };
-
-    const removerOpcao = (index: number) => {
+    const adicionarDado = (opcaoIndex: number) => {
         const novasOpcoes = [...opcoes];
-        novasOpcoes.splice(index, 1);
+        novasOpcoes[opcaoIndex].dados.push({ name: "", lados: 0, quantidade: 1, bonus: 0 });
         setOpcoes(novasOpcoes);
     };
 
-    const atualizarNomeOpcao = (index: number, valor: string) => {
-        const novasOpcoes = [...opcoes];
-        novasOpcoes[index].name = valor;
-        setOpcoes(novasOpcoes);
-    };
-
-    const adicionarDadoAOpcao = (
-        opcaoIndex: number,
-        dado: DadoVotacao | null
-    ) => {
-        const novasOpcoes = [...opcoes];
-        novasOpcoes[opcaoIndex].dados.push(getNewDadoPadrao(dado));
-        setOpcoes(novasOpcoes);
-    };
-
-    const removerDadoDaOpcao = (opcaoIndex: number, dadoIndex: number) => {
+    const removerDado = (opcaoIndex: number, dadoIndex: number) => {
         const novasOpcoes = [...opcoes];
         novasOpcoes[opcaoIndex].dados.splice(dadoIndex, 1);
         setOpcoes(novasOpcoes);
     };
 
-    const atualizarDadosOpcao = (
+    const atualizarDado = (
         opcaoIndex: number,
         dadoIndex: number,
         campo: keyof DadoVotacao,
         valor: number | string
     ) => {
         const novasOpcoes = [...opcoes];
-        const dadoParaAtualizar = novasOpcoes[opcaoIndex].dados[dadoIndex];
+        const dado = novasOpcoes[opcaoIndex].dados[dadoIndex];
         if (campo === "name") {
-            dadoParaAtualizar.name = valor as string;
+            dado.name = valor as string;
         } else {
-            (dadoParaAtualizar[campo] as number) = valor as number;
+            (dado[campo] as number) = valor as number;
         }
         setOpcoes(novasOpcoes);
     };
 
-    const criarVotacaoComDados = async () => {
-        if (!id) return;
-        const opcoesValidas = opcoes.filter((opcao) => {
-            const todosOsDadosValidos = opcao.dados.every(
-                (dado) =>
-                    dado.name.trim() !== "" && dado.lados > 0 && dado.quantidade > 0
-            );
-            return opcao.name.trim() !== "" && todosOsDadosValidos;
-        });
+    const restaurarDadosPadrao = (opcaoIndex: number) => {
+        const novasOpcoes = [...opcoes];
+        novasOpcoes[opcaoIndex].dados = dadosPadraoInimigos.map(d => ({ ...d }));
+        setOpcoes(novasOpcoes);
+    };
 
-        if (opcoesValidas.length === 0) {
-            toast.warn("Adicione pelo menos uma opção com dados válidos!");
+    // --- Envio ---
+
+    const criarVotacao = async () => {
+        if (!id) return;
+
+        // Valida: cada jogador precisa ter ao menos 1 dado válido
+        const opcoesInvalidas = opcoes.filter(op =>
+            op.dados.length === 0 ||
+            op.dados.some(d => d.name.trim() === "" || d.lados <= 0 || d.quantidade <= 0)
+        );
+
+        if (opcoesInvalidas.length > 0) {
+            const nomes = opcoesInvalidas.map(o => o.name).join(", ");
+            toast.warn(`Corrija os dados de: ${nomes}`);
             return;
         }
 
         try {
-            const data = { opcoes: opcoesValidas };
-            await api.post(`/mestre/jogador${id}/criaVotacaoComDado`, data);
+            // O payload mantém o mesmo formato que o backend já espera
+            const payload = {
+                opcoes: opcoes.map(op => ({
+                    name: op.name,
+                    dados: op.dados,
+                })),
+            };
+            await api.post(`/mestre/jogador${id}/criaVotacaoComDado`, payload);
             toast.success("Votação criada com sucesso!");
-            
-            // REDIRECIONA PARA A PÁGINA DE AGUARDAR VOTAÇÃO
             navigate(`/goiabada/${id}/aguarda-votacao`);
         } catch {
             toast.error("Erro ao criar votação");
@@ -292,175 +121,112 @@ export function VotacaoComDados() {
             <Header isMaster={true} />
             <div id="tudo">
                 <section>
-                    <h1>Votação com Dados - Personagem {jogadores[Number(id) - 1]}</h1>
-                    <div className="votacao-config">
-                        <h2>Configurar Opções com Dados</h2>
-                        <button className="button add-option" onClick={adicionarOpcao}>
-                            Adicionar Opção
-                        </button>
+                    <h1>Configurar Ataque dos Inimigos</h1>
+                    <p className="instrucoes">
+                        O auditório vai votar em <strong>qual jogador será atacado</strong>.
+                        Configure abaixo os dados que os inimigos usarão contra cada jogador.
+                    </p>
 
-                        <div id="dados-customizados">
-                            {opcoes.map((opcao, opcaoIndex) => (
-                                <div key={opcaoIndex} className="opcao-container">
-                                    <div className="opcao-header">
-                                        <input
-                                            type="text"
-                                            placeholder="Nome da opção"
-                                            value={opcao.name}
-                                            onChange={(e) =>
-                                                atualizarNomeOpcao(opcaoIndex, e.target.value)
-                                            }
-                                            className="opcao-nome"
-                                        />
-                                        <div
-                                            className="button-remover"
-                                            onClick={() => removerOpcao(opcaoIndex)}
-                                        >
-                                            Remover Opção
-                                        </div>
-                                    </div>
+                    <div className="votacao-config" id="dados-customizados">
+                        {opcoes.map((opcao, opcaoIndex) => (
+                            <div key={opcaoIndex} className="opcao-container">
+                                <div className="opcao-header">
+                                    {/* Espaço reservado para a imagem do personagem */}
+                                    {imagens[opcao.jogadorId - 1]
+                                        ? <img
+                                            src={imagens[opcao.jogadorId - 1]}
+                                            alt={opcao.name}
+                                            className="opcao-jogador-img"
+                                          />
+                                        : <div className="imagem-placeholder opcao-jogador-img" aria-label={opcao.name}>
+                                            {opcao.name}
+                                          </div>
+                                    }
+                                    <h2 className="opcao-nome">{opcao.name}</h2>
+                                </div>
 
-                                    <div className="dados-config">
-                                        {opcao.dados.map((dado, dadoIndex) => (
-                                            <div key={dadoIndex} className="dado-inputs-row">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Nome do dado"
-                                                    value={dado.name}
-                                                    onChange={(e) =>
-                                                        atualizarDadosOpcao(
-                                                            opcaoIndex,
-                                                            dadoIndex,
-                                                            "name",
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                />
-                                                <div style={{display: "flex", alignItems: "center"}}>
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Quantidade"
-                                                            className="input-number"
-                                                            value={dado.quantidade > 0 ? dado.quantidade : ""}
-                                                            min={0}
-                                                            onChange={(e) =>
-                                                                atualizarDadosOpcao(
-                                                                    opcaoIndex,
-                                                                    dadoIndex,
-                                                                    "quantidade",
-                                                                    parseInt(e.target.value) || 1
-                                                                )
-                                                            }
-                                                        />
-                                                        <span>D</span> 
-                                                    <input
-                                                        type="text"
-                                                        id="ilados"
-                                                        placeholder="Lados"
-                                                        list="lados-list"
-                                                        value={dado.lados > 0 ? dado.lados : ""}
-                                                        onChange={(e) =>
-                                                            atualizarDadosOpcao(
-                                                                opcaoIndex,
-                                                                dadoIndex,
-                                                                "lados",
-                                                                parseInt(e.target.value) || 0
-                                                            )
-                                                        }
-                                                    />
-                                                    <datalist id="lados-list">
-                                                        <option>2</option>
-                                                        <option>4</option>
-                                                        <option>6</option>
-                                                        <option>8</option>
-                                                        <option>10</option>
-                                                        <option>12</option>
-                                                        <option>14</option>
-                                                        <option>16</option>
-                                                        <option>18</option>
-                                                        <option>20</option>
-                                                    </datalist>
-                                                </div>
+                                <div className="dados-config">
+                                    {opcao.dados.map((dado, dadoIndex) => (
+                                        <div key={dadoIndex} className="dado-inputs-row">
+                                            <input
+                                                type="text"
+                                                placeholder="Nome do dado"
+                                                value={dado.name}
+                                                onChange={(e) =>
+                                                    atualizarDado(opcaoIndex, dadoIndex, "name", e.target.value)
+                                                }
+                                            />
+                                            <div style={{ display: "flex", alignItems: "center" }}>
                                                 <input
                                                     type="number"
+                                                    placeholder="Qtd"
                                                     className="input-number"
-                                                    value={dado.bonus && dado.bonus > 0 ? dado.bonus : ""}
-                                                    placeholder="Bônus"
+                                                    value={dado.quantidade > 0 ? dado.quantidade : ""}
+                                                    min={1}
                                                     onChange={(e) =>
-                                                        atualizarDadosOpcao(
-                                                            opcaoIndex,
-                                                            dadoIndex,
-                                                            "bonus",
-                                                            parseInt(e.target.value) || 0
-                                                        )
+                                                        atualizarDado(opcaoIndex, dadoIndex, "quantidade", parseInt(e.target.value) || 1)
                                                     }
                                                 />
-                                                <div
-                                                    className="button-remover"
-                                                    onClick={() =>
-                                                        removerDadoDaOpcao(opcaoIndex, dadoIndex)
+                                                <span>D</span>
+                                                <input
+                                                    type="text"
+                                                    id="ilados"
+                                                    placeholder="Lados"
+                                                    list="lados-list"
+                                                    value={dado.lados > 0 ? dado.lados : ""}
+                                                    onChange={(e) =>
+                                                        atualizarDado(opcaoIndex, dadoIndex, "lados", parseInt(e.target.value) || 0)
                                                     }
-                                                >
-                                                    Remover Dado
-                                                </div>
+                                                />
+                                                <datalist id="lados-list">
+                                                    <option>2</option>
+                                                    <option>4</option>
+                                                    <option>6</option>
+                                                    <option>8</option>
+                                                    <option>10</option>
+                                                    <option>12</option>
+                                                    <option>14</option>
+                                                    <option>16</option>
+                                                    <option>18</option>
+                                                    <option>20</option>
+                                                </datalist>
                                             </div>
-                                        ))}
-                                        <div
-                                            className="button"
-                                            onClick={() => adicionarDadoAOpcao(opcaoIndex, null)}
-                                        >
-                                            Adicionar + Dado
+                                            <input
+                                                type="number"
+                                                className="input-number"
+                                                value={dado.bonus && dado.bonus > 0 ? dado.bonus : ""}
+                                                placeholder="Bônus"
+                                                onChange={(e) =>
+                                                    atualizarDado(opcaoIndex, dadoIndex, "bonus", parseInt(e.target.value) || 0)
+                                                }
+                                            />
+                                            <div
+                                                className="button-remover"
+                                                onClick={() => removerDado(opcaoIndex, dadoIndex)}
+                                            >
+                                                Remover Dado
+                                            </div>
                                         </div>
-                                        <div
-                                            className="button"
-                                            onClick={() =>
-                                                adicionarDadoAOpcao(opcaoIndex, {
-                                                    lados: 20,
-                                                    quantidade: 1,
-                                                    bonus: 0,
-                                                    name: "Teste",
-                                                })
-                                            }
-                                        >
-                                            Dado de Teste
+                                    ))}
+
+                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                        <div className="button" onClick={() => adicionarDado(opcaoIndex)}>
+                                            + Dado
+                                        </div>
+                                        <div className="button" onClick={() => restaurarDadosPadrao(opcaoIndex)}>
+                                            Restaurar Padrão
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="controles-votacao">
-                        <div className="button" onClick={abrirAcoesPadrao}>
-                            Ações Padrão
-                        </div>
-                        <div className="button" onClick={criarVotacaoComDados}>
-                            Criar Votação ({opcoes.length} opções)
+                        <div className="button" onClick={criarVotacao}>
+                            Iniciar Votação
                         </div>
                     </div>
-
-                    {mostrarModalAcoes && (
-                        <div className="modal">
-                            <div className="modalVotacao">
-                                <h2>Ações Padrão</h2>
-                                {acoesPadrao.map((acao, i) => (
-                                    <div
-                                        key={i}
-                                        className="button"
-                                        onClick={() => adicionarAcaoPadrao(acao)}
-                                    >
-                                        {acao.name} {acao.infoExtra ? `(${acao.infoExtra})` : ""}
-                                    </div>
-                                ))}
-                                <button
-                                    className="button-remover"
-                                    onClick={() => setMostrarModalAcoes(false)}
-                                >
-                                    Fechar
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </section>
                 <Footer />
             </div>

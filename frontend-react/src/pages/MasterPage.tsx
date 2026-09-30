@@ -13,32 +13,27 @@ import {
 export function Master() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [vidaNova, setVidaNova] = useState<number | "">(
-    Number(localStorage.getItem("vida"))
+  const [numeroInimigos, setNumeroInimigos] = useState<number | "">(
+    Number(localStorage.getItem("numeroInimigos")) || 10
   );
-  const [namePlayer,] = useState<string>(() => {
-    return id == "1" ? "Zenchi" : id == "2" ? "Atnos" : id == "3" ? "Sam" : ""
-  });
-  const [jeitinBrasileiro,] = useState<number>(() => {
-    return id == "1" ? 28 : id == "2" ? 30 : id == "3" ? 41 : 0
-  })
+
 
   const handleClickVota = () => {
     navigate(`/votacao-dados/${id}`);
   };
   const handleAtualizarVida = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || vidaNova === "") return;
+    if (!id || numeroInimigos === "") return;
 
     try {
-      console.log("enviando vida nova: ", vidaNova);
+      console.log("enviando numeroInimigos: ", numeroInimigos);
       const res = await api.post(`mestre/jogador${id}/vida`, {
-        vidaNova: vidaNova,
+        numeroInimigos: numeroInimigos,
       });
-      console.log("Vida enviada:", res.data);
-      localStorage.setItem("vida", vidaNova + "");
+      console.log("Número de inimigos enviado:", res.data);
+      localStorage.setItem("numeroInimigos", numeroInimigos + "");
     } catch (err) {
-      console.error("Erro ao atualizar vida:", err);
+      console.error("Erro ao atualizar número de inimigos:", err);
     }
   };
 
@@ -46,19 +41,16 @@ export function Master() {
     <div>
       <Header isMaster={true} />
       <div id="tudo">
-        <img
-          src={imagens[Number(id) - 1]}
-          id="img1"
-          className="portrait"
-          alt={descricoesImagens[Number(id) - 1]}
-        />
+        {imagens[Number(id) - 1]
+          ? <img src={imagens[Number(id) - 1]} id="img1" className="portrait" alt={descricoesImagens[Number(id) - 1]} />
+          : <div className="imagem-placeholder portrait" aria-label={descricoesImagens[Number(id) - 1]}>{jogadores[Number(id) - 1]}</div>
+        }
         <section className="principal">
           <h1>Mestre - {jogadores[Number(id) - 1]}</h1>
           <div>
             <form onSubmit={handleAtualizarVida} className="bloco">
-              <h2 style={{ fontWeight: "bold" }}>Vida do {namePlayer} </h2>
-              {/* Precisa pegar o get da vida atual e colocar aqui */}
-              <h3>Vida atual: {!vidaNova ? jeitinBrasileiro : vidaNova} / {jeitinBrasileiro}</h3>
+              <h2 style={{ fontWeight: "bold" }}>Número de Inimigos</h2>
+              <h3>Inimigos atuais: {numeroInimigos !== "" ? numeroInimigos : 10}</h3>
               <div
                 style={{
                   display: "flex",
@@ -66,18 +58,19 @@ export function Master() {
                   alignItems: "center",
                 }}
               >
-                <label htmlFor="vida">Modificar vida atual</label>
+                <label htmlFor="numeroInimigos">Modificar número de inimigos</label>
                 <input
                   type="number"
-                  value={vidaNova}
-                  onChange={(e) => setVidaNova(Number(e.target.value))}
+                  value={numeroInimigos}
+                  onChange={(e) => setNumeroInimigos(Number(e.target.value))}
                   className="input-number"
-                  id="vida"
+                  id="numeroInimigos"
+                  min={0}
                 />
               </div>
 
               <button type="submit" className="botao-enviar">
-                Atualizar Vida
+                Atualizar Inimigos
               </button>
             </form>
             {/* <form>

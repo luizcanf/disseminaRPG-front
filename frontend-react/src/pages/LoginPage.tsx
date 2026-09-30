@@ -7,6 +7,8 @@ export function Login() {
   const [clicou1, setClicou1] = useState<boolean>(false);
   const [clicou2, setClicou2] = useState<boolean>(false);
   const [clicou3, setClicou3] = useState<boolean>(false);
+  const [clicou4, setClicou4] = useState<boolean>(false);
+  const [clicou5, setClicou5] = useState<boolean>(false);
   return (
     <div>
       <Header />
@@ -65,6 +67,42 @@ export function Login() {
             <div>
               <button className="button" onClick={() => setClicou3(true)}>
                 Sam
+              </button>
+            </div>
+
+            {clicou4 && (
+              <div className="modal">
+                <button
+                  className="button"
+                  id="close"
+                  onClick={() => setClicou4(false)}
+                >
+                  x
+                </button>
+                <CharButtons CharNumber={4} />
+              </div>
+            )}
+            <div>
+              <button className="button" onClick={() => setClicou4(true)}>
+                Jogador 4
+              </button>
+            </div>
+
+            {clicou5 && (
+              <div className="modal">
+                <button
+                  className="button"
+                  id="close"
+                  onClick={() => setClicou5(false)}
+                >
+                  x
+                </button>
+                <CharButtons CharNumber={5} />
+              </div>
+            )}
+            <div>
+              <button className="button" onClick={() => setClicou5(true)}>
+                Jogador 5
               </button>
             </div>
           </div>

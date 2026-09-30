@@ -46,7 +46,7 @@ export function Player() {
       <div id="tudo">
         <section>
           <h1>Jogador do {jogadores[Number(id) - 1]}</h1>
-          <h2 id="vida">Vida: {sseValue !== null ? sseValue : "Carregando..."}</h2>
+          <h2 id="vida">Número de inimigos: {sseValue !== null ? sseValue : "Carregando..."}</h2>
           {/* <form action="">
             <button
               id="btnRolagem"
